@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: zero-trust-system
+  labels:
+    app: zero-trust-admission-controller
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zero-trust-admission-controller
+  namespace: zero-trust-system
+  labels:
+    app: zero-trust-admission-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zero-trust-admission-controller
+  template:
+    metadata:
+      labels:
+        app: zero-trust-admission-controller
+    spec:
+      serviceAccountName: zero-trust-admission-controller
+      containers:
+        - name: admission-controller
+          image: zero-trust-admission-controller:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8443
+              name: https
+          env:
+            - name: ADMISSION_PRIVATE_IP
+              value: "0.0.0.0"
+            - name: POLICY_CONFIG
+              value: "/etc/policy/policies.yaml"
+            - name: TLS_CERT_FILE
+              value: "/etc/tls/tls.crt"
+            - name: TLS_KEY_FILE
+              value: "/etc/tls/tls.key"
+          volumeMounts:
+            - name: tls-certs
+              mountPath: /etc/tls
+              readOnly: true
+            - name: policy-config
+              mountPath: /etc/policy
+              readOnly: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: zero-trust-admission-tls
+        - name: policy-config
+          configMap:
+            name: zero-trust-policy-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zero-trust-admission-controller
+  namespace: zero-trust-system
+  labels:
+    app: zero-trust-admission-controller
+spec:
+  ports:
+    - port: 443
+      targetPort: 8443
+      protocol: TCP
+      name: https
+  selector:
+    app: zero-trust-admission-controller
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: zero-trust-admission-controller
+  namespace: zero-trust-system

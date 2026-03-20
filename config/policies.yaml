@@ -1,0 +1,37 @@
+# Zero-Trust Admission Controller - Policy-as-Code Configuration
+# These rules enforce pod security standards in shared environments
+
+policies:
+  # Pod Security Standards (aligned with Kubernetes Pod Security Admission)
+  pod_security:
+    # Prevent privilege escalation - critical for shared environments
+    deny_privilege_escalation: true
+    
+    # Reject privileged containers
+    deny_privileged: true
+    
+    # Require read-only root filesystem (optional - can be relaxed)
+    require_read_only_root_filesystem: false
+    
+    # Reject host namespaces (hostPID, hostIPC, hostNetwork)
+    deny_host_namespaces: true
+    
+    # Require non-root user (optional)
+    require_non_root: false
+    
+    # Block sensitive volume mounts
+    blocked_volumes:
+      - hostPath
+      - privileged
+  
+  # mTLS injection - namespaces that get automatic cert injection
+  mtls_injection:
+    # Label selector: inject mTLS into pods in namespaces with this label
+    namespace_selector:
+      zero-trust.io/mtls: "enabled"
+    
+    # Volume name for injected certs
+    volume_name: "mtls-certs"
+    
+    # Mount path inside container
+    mount_path: "/var/run/mtls"
